@@ -1,3 +1,6 @@
+
+const curry = require('ramda/src/curry')
+
 function defaultEqualityCheck(a, b) {
   return a === b
 }
@@ -36,15 +39,19 @@ function getDependencies(funcs) {
 }
 
 export function createSelectorCreator(memoize, ...memoizeOptions) {
-  return (...funcs) => {
+  return curry((funcs, select) => {
+    if (!Array.isArray(funcs)) throw new Error(
+      'please provide an array of selectors as your first argument to createSelector ' +
+      'and the transforming function as the second one.'
+    )
+
     let recomputations = 0
-    const resultFunc = funcs.pop()
     const dependencies = getDependencies(funcs)
 
     const memoizedResultFunc = memoize(
       (...args) => {
         recomputations++
-        return resultFunc(...args)
+        return select(...args)
       },
       ...memoizeOptions
     )
@@ -56,11 +63,11 @@ export function createSelectorCreator(memoize, ...memoizeOptions) {
       return memoizedResultFunc(...params)
     }
 
-    selector.resultFunc = resultFunc
+    selector.resultFunc = select
     selector.recomputations = () => recomputations
     selector.resetRecomputations = () => recomputations = 0
     return selector
-  }
+  })
 }
 
 export const createSelector = createSelectorCreator(defaultMemoize)
